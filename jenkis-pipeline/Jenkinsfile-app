@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+    
+    environment {
+    AWS_DEFAULT_REGION = "us-east-1"
+	THE_BUTLER_SAYS_SO=credentials('jk-aws-credentials')
+	ECS_CLUSTER = 'jk-webapp-cluster'
+    ECS_SERVICE = 'jk-webapp-svc'
+}
+
+    stages {
+        stage('Jenkins user checking if aws-cli is installed') {
+            steps {
+                sh 'aws --version'
+            }
+        }
+        
+        stage('Jenkins user listing aws resources') {
+            steps {
+	            sh '''
+                aws s3 ls
+                aws ec2 describe-instances
+                '''
+            }
+        }
+        
+        stage('Jenkins user accessing GitHub') {
+            steps {
+	            git branch: 'main', credentialsId: 'jk-gh-tk', url: 'https://github.com/cleristonwil/jk-cc-repo.git'
+            }
+        }
+        
+        stage('Jenkins Build and push image for ECR') {
+            steps {
+	            sh '''
+	            docker logout
+	            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 503561427708.dkr.ecr.us-east-1.amazonaws.com
+	            docker build -t jk-webapp:latest .
+	            docker tag jk-webapp:latest 503561427708.dkr.ecr.us-east-1.amazonaws.com/jk-webapp:latest
+	            docker push 503561427708.dkr.ecr.us-east-1.amazonaws.com/jk-webapp:latest
+	            '''
+            }
+        }
+        
+        stage('Deploying Webapp Application on AWS ECS') {
+            steps {
+	            sh 'aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment'
+            }
+        }
+    }
+}

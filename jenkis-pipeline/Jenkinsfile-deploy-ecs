@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+    
+    environment {
+        TERRAFORM_DIR = "/home/willian/terraform-ecs"
+        TERRAFORM_DIR_MODULE = "/home/willian/terraform-ecs/modules"
+    }
+
+    stages {
+        stage('Terraform validate') {
+            steps {
+                sh 'terraform --version'
+            }
+        }
+        
+        stage('Terraform init') {
+            steps {
+                script {
+                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform init'"
+                }
+            }
+        }
+        
+        stage('Terraform fmt') {
+            steps {
+                script {
+                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform fmt'"
+                sh "bash -c 'cd ${env.TERRAFORM_DIR_MODULE} && terraform fmt'"
+                }
+            }
+        }
+        
+         stage('Terraform plan') {
+            steps {
+                script {
+                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform plan'"
+                }
+            }
+        }
+        
+        stage('Terraform apply') {
+            steps {
+                script {
+                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform apply -auto-approve'"
+                }
+            }
+        }
+    }
+}

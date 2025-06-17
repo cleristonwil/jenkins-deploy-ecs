@@ -1,0 +1,8 @@
+.terraform-ecs/
+provider.tf
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+*.tfplan
+*.tfstate.lock.info
+.terraform/

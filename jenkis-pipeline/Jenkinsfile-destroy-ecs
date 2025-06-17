@@ -1,0 +1,24 @@
+pipeline {
+    agent any
+    
+    environment {
+        TERRAFORM_DIR = "/home/willian/terraform-ecs"
+        TERRAFORM_DIR_MODULE = "/home/willian/terraform-ecs/modules"
+    }
+
+    stages {
+        stage('Terraform validate') {
+            steps {
+                sh 'terraform --version'
+            }
+        }
+        
+        stage('Terraform Destroy') {
+            steps {
+                script {
+                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform destroy -auto-approve'"
+                }
+            }
+        }
+    }
+}
