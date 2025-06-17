@@ -1,16 +1,16 @@
-# Jenkins CI/CD com Terraform e AWS ECS
+# Jenkins Deploy ECS - Pipeline CI/CD
 
 Este projeto demonstra como implementar um pipeline CI/CD completo usando Jenkins, Terraform e AWS ECS para automatizar o deploy de aplicações containerizadas.
 
-## 📋 Visão Geral
+## 🏗️ Arquitetura do Projeto
 
 O projeto consiste em 3 pipelines Jenkins:
 
-1. **Deploy ECS** - Cria a infraestrutura AWS usando Terraform
-2. **App Deploy** - Faz build da aplicação e deploy no ECS
-3. **Destroy ECS** - Remove todos os recursos AWS criados
+- **Deploy ECS** - Cria a infraestrutura AWS usando Terraform
+- **App Deploy** - Faz build da aplicação e deploy no ECS  
+- **Destroy ECS** - Remove todos os recursos AWS criados
 
-## 📁 Estrutura do Repositório
+### 📁 Estrutura do Repositório
 
 ```
 ├── app/
@@ -34,9 +34,9 @@ O projeto consiste em 3 pipelines Jenkins:
             └── variables.tf
 ```
 
-## 🔧 Pré-requisitos
+## ⚙️ Pré-requisitos
 
-### 1. Plugins do Jenkins
+### 1. Plugins Jenkins
 
 Instale os seguintes plugins no Jenkins:
 
@@ -47,69 +47,70 @@ Instale os seguintes plugins no Jenkins:
 - **Pipeline Stage View Plugin** - Para visualizar estágios do pipeline
 
 **Como instalar:**
-1. Vá em `Gerenciar Jenkins` > `Plugin Manager`
-2. Na aba `Available`, procure por cada plugin
-3. Marque a caixa de seleção e clique em `Install without restart`
+- Vá em `Gerenciar Jenkins` > `Plugin Manager`
+- Na aba `Available`, procure por cada plugin
+- Marque a caixa de seleção e clique em `Install without restart`
 
-### 2. Usuário Programático AWS
+### 2. Configurar Credenciais AWS
 
-1. **Criar usuário IAM:**
-   - Acesse AWS Console > IAM > Users
-   - Clique em `Add user`
-   - Nome: `jenkins-terraform-user`
-   - Access type: `Programmatic access`
+**Criar usuário IAM:**
+- Acesse AWS Console > IAM > Users
+- Clique em `Add user`
+- Nome: `jenkins-terraform-user`
+- Access type: `Programmatic access`
 
-2. **Configurar permissões:**
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Effect": "Allow",
-         "Action": "*",
-         "Resource": "*"
-       }
-     ]
-   }
-   ```
-   > ⚠️ **Para produção:** Use permissões mais restritivas. Esta permissão de administrador é apenas para testes.
+**Configurar permissões:**
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "*",
+      "Resource": "*"
+    }
+  ]
+}
+```
 
-3. **Salvar credenciais:**
-   - Anote o `Access Key ID` e `Secret Access Key`
-   - **IMPORTANTE:** Exclua este usuário após os testes para segurança
+⚠️ **Para produção:** Use permissões mais restritivas. Esta permissão de administrador é apenas para testes.
+
+**Salvar credenciais:**
+- Anote o `Access Key ID` e `Secret Access Key`
+- **IMPORTANTE:** Exclua este usuário após os testes para segurança
 
 ### 3. Configurar Credenciais no Jenkins
 
-1. Vá em `Gerenciar Jenkins` > `Security` > `Manage Credentials`
-2. Clique em `Global` > `Add Credentials`
-3. Selecione `AWS Credentials`
-4. Preencha:
-   - **ID:** `jk-aws-credentials` (usado nos Jenkinsfiles)
-   - **Access Key ID:** Sua access key da AWS
-   - **Secret Access Key:** Sua secret key da AWS
-   - **Description:** Jenkins AWS Credentials
+- Vá em `Gerenciar Jenkins` > `Security` > `Manage Credentials`
+- Clique em `Global` > `Add Credentials`
+- Selecione `AWS Credentials`
+- Preencha:
+  - ID: `jk-aws-credentials` (usado nos Jenkinsfiles)
+  - Access Key ID: Sua access key da AWS
+  - Secret Access Key: Sua secret key da AWS
+  - Description: Jenkins AWS Credentials
 
-### 4. Repositório ECR na AWS
+### 4. Criar Repositório ECR
 
-1. **Criar repositório ECR:**
-   ```bash
-   aws ecr create-repository --repository-name sua-aplicacao --region us-east-1
-   ```
+**Via AWS CLI:**
+```bash
+aws ecr create-repository --repository-name sua-aplicacao --region us-east-1
+```
 
-2. **Ou via Console AWS:**
-   - AWS Console > ECR > Repositories
-   - Clique em `Create repository`
-   - Nome: `sua-aplicacao`
-   - Visibilidade: `Public` (para testes)
+**Ou via Console AWS:**
+- AWS Console > ECR > Repositories
+- Clique em `Create repository`
+- Nome: `sua-aplicacao`
+- Visibilidade: `Public` (para testes)
 
-3. **Obter comandos de push:**
-   - Clique no repositório criado
-   - Clique em `View push commands`
-   - **Substitua os valores no `Jenkinsfile-app`** pelos comandos gerados
+**Obter comandos de push:**
+- Clique no repositório criado
+- Clique em `View push commands`
+- Substitua os valores no `Jenkinsfile-app` pelos comandos gerados
 
-### 5. Instalações no Servidor Jenkins
+## 🖥️ Instalação de Dependências no Servidor Jenkins
 
-#### AWS CLI
+### AWS CLI
 ```bash
 # Ubuntu/Debian
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -120,7 +121,7 @@ sudo ./aws/install
 aws --version
 ```
 
-#### Docker
+### Docker
 ```bash
 # Ubuntu/Debian
 sudo apt update
@@ -128,15 +129,23 @@ sudo apt install docker.io
 sudo systemctl start docker
 sudo systemctl enable docker
 
+# Adicionar usuário atual ao grupo docker (para não precisar de sudo)
+sudo usermod -aG docker $USER
+
 # Adicionar usuário jenkins ao grupo docker
 sudo usermod -aG docker jenkins
+
+# Reiniciar para aplicar as mudanças
+sudo systemctl restart docker
 sudo systemctl restart jenkins
 
 # Verificar instalação
 docker --version
 ```
 
-#### Terraform
+⚠️ **Importante:** Faça logout e login novamente para que as permissões do Docker sejam aplicadas ao seu usuário.
+
+### Terraform
 ```bash
 # Download e instalação
 wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
@@ -147,8 +156,7 @@ sudo mv terraform /usr/local/bin/
 terraform --version
 ```
 
-### 6. Permissões do Usuário Jenkins
-
+### Configurar Permissões Finais
 ```bash
 # Adicionar jenkins aos grupos necessários
 sudo usermod -aG docker jenkins
@@ -163,95 +171,115 @@ sudo -u jenkins terraform --version
 sudo -u jenkins aws --version
 ```
 
-## 🚀 Como Usar
+## 📝 Configuração Obrigatória do terraform.tfvars
 
-### 1. Configurar Jobs no Jenkins
+⚠️ **ATENÇÃO:** Antes de executar os pipelines, você **DEVE** editar o arquivo `terraform-ecs/terraform.tfvars` com seus dados específicos:
+
+```hcl
+# Substitua pelos seus valores
+vpc_id = "vpc-xxxxxxxxx"           # ID da sua VPC
+security_group_id = "sg-xxxxxxxxx" # ID do Security Group da sua VPC
+ecr_repository_url = "123456789012.dkr.ecr.us-east-1.amazonaws.com/sua-aplicacao"
+```
+
+**Como obter esses valores:**
+
+1. **VPC ID:** AWS Console > VPC > Your VPCs
+2. **Security Group ID:** AWS Console > EC2 > Security Groups (escolha um da sua VPC)
+3. **ECR Repository URL:** AWS Console > ECR > Repositories (copie o URI do repositório criado)
+
+## 🔧 Configuração dos Pipelines Jenkins
 
 Para cada pipeline, crie um novo job:
 
-1. **Job: Deploy-ECS**
-   - New Item > Pipeline
-   - Pipeline > Definition: `Pipeline script from SCM`
-   - SCM: Git
-   - Repository URL: `sua-url-do-repositorio`
-   - Script Path: `jenkins-pipeline/Jenkinsfile-deploy-ecs`
+### Job: Deploy-ECS
+- New Item > Pipeline
+- Pipeline > Definition: `Pipeline script from SCM`
+- SCM: Git
+- Repository URL: `sua-url-do-repositorio`
+- Script Path: `jenkins-pipeline/Jenkinsfile-deploy-ecs`
 
-2. **Job: App-Deploy**
-   - Script Path: `jenkins-pipeline/Jenkinsfile-app`
+### Job: App-Deploy
+- Script Path: `jenkins-pipeline/Jenkinsfile-app`
 
-3. **Job: Destroy-ECS**
-   - Script Path: `jenkins-pipeline/Jenkinsfile-destroy-ecs`
+### Job: Destroy-ECS
+- Script Path: `jenkins-pipeline/Jenkinsfile-destroy-ecs`
 
-### 2. Customizar Jenkinsfile-app
+## 🚀 Configuração do ECR no Pipeline
 
-No arquivo `jenkins-pipeline/Jenkinsfile-app`, substitua:
+No arquivo `jenkins-pipeline/Jenkinsfile-app`, substitua pelos comandos do seu ECR:
 
 ```bash
 # Substituir pelos comandos do seu ECR
 aws ecr get-login-password --region SUA_REGIAO | docker login --username AWS --password-stdin SEU_ACCOUNT_ID.dkr.ecr.SUA_REGIAO.amazonaws.com
+
 docker build -t SEU_REPO_NAME:latest .
 docker tag SEU_REPO_NAME:latest SEU_ACCOUNT_ID.dkr.ecr.SUA_REGIAO.amazonaws.com/SEU_REPO_NAME:latest
 docker push SEU_ACCOUNT_ID.dkr.ecr.SUA_REGIAO.amazonaws.com/SEU_REPO_NAME:latest
 ```
 
-### 3. Ordem de Execução
+## ▶️ Ordem de Execução
 
 1. **Execute primeiro:** `Deploy-ECS` - Cria a infraestrutura
-2. **Execute segundo:** `App-Deploy` - Faz deploy da aplicação
+2. **Execute segundo:** `App-Deploy` - Faz deploy da aplicação  
 3. **Execute por último:** `Destroy-ECS` - Remove recursos (quando necessário)
 
-## 💰 Custos AWS
+## 💰 Importante - Custos AWS
 
 Este projeto cria recursos que podem gerar custos na AWS:
 
-- **ECS Cluster** (Fargate)
+- **ECS Cluster** (EC2 - otimizado para free tier)
 - **Application Load Balancer**
 - **NAT Gateway**
 - **ECR Repository**
 
-> 💡 **Dica:** Execute o pipeline `Destroy-ECS` após os testes para evitar custos desnecessários.
+💡 **Dica:** Execute o pipeline `Destroy-ECS` após os testes para evitar custos desnecessários.
 
 ## 🔍 Troubleshooting
 
-### Erro de Permissão Docker
+### Erro de permissão Docker
 ```bash
+sudo usermod -aG docker $USER
 sudo usermod -aG docker jenkins
 sudo systemctl restart jenkins
 ```
 
-### Erro de Credenciais AWS
+### Erro de credenciais AWS
 - Verifique se as credenciais estão corretas no Jenkins
 - Teste manualmente: `aws sts get-caller-identity`
 
-### Erro de Terraform
+### Erro do Terraform
 ```bash
 # Limpar cache do Terraform
 rm -rf .terraform*
 terraform init
 ```
 
-### Erro de ECR
+### Erro no ECR
 - Verifique se o repositório ECR existe
 - Confirme se a região está correta
 - Teste o login manual: `aws ecr get-login-password`
 
-## 📚 Recursos Adicionais
+## ⚠️ Considerações de Segurança e Boas Práticas
 
-- [Documentação Jenkins](https://www.jenkins.io/doc/)
-- [Documentação Terraform](https://developer.hashicorp.com/terraform/docs)
-- [Documentação AWS ECS](https://docs.aws.amazon.com/ecs/)
-- [Documentação AWS ECR](https://docs.aws.amazon.com/ecr/)
+- **Segurança:** Remova o usuário AWS após os testes
+- **Custos:** Execute `Destroy-ECS` para limpar recursos
+- **Produção:** Use permissões IAM mais restritivas
+- **Backup State:** Configure remote state para Terraform em produção
 
-## ⚠️ Avisos Importantes
+---
 
-1. **Segurança:** Remova o usuário AWS após os testes
-2. **Custos:** Execute `Destroy-ECS` para limpar recursos
-3. **Produção:** Use permissões IAM mais restritivas
-4. **Backup State:** Configure remote state para Terraform em produção
+## 🎯 Sobre o Projeto
 
-## 🤝 Contribuição
+Este é um projeto **educacional** que demonstra:
 
-Este é um projeto educacional. Sinta-se livre para fazer melhorias e adaptações conforme sua necessidade.
+- **Pipeline CI/CD** completo com Jenkins
+- **Infrastructure as Code** com Terraform
+- **Containerização** com Docker
+- **Deploy automatizado** no AWS ECS com EC2 (free tier friendly)
+- **Melhores práticas** de DevOps
+
+Sinta-se livre para fazer melhorias e adaptações conforme sua necessidade.
 
 ---
 
