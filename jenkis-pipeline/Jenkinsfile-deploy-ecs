@@ -2,13 +2,16 @@ pipeline {
     agent any
     
     environment {
-        TERRAFORM_DIR = "/home/willian/terraform-ecs"
-        TERRAFORM_DIR_MODULE = "/home/willian/terraform-ecs/modules"
+        // Diretório onde estão os arquivos Terraform (relativo ao workspace do Jenkins)
+        TERRAFORM_DIR = "terraform-ecs"
+        // Diretório dos módulos Terraform (relativo ao workspace do Jenkins)
+        TERRAFORM_DIR_MODULE = "terraform-ecs/modules"
     }
 
     stages {
         stage('Terraform validate') {
             steps {
+                // Verifica se o Terraform está instalado e mostra a versão
                 sh 'terraform --version'
             }
         }
@@ -16,7 +19,9 @@ pipeline {
         stage('Terraform init') {
             steps {
                 script {
-                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform init'"
+                    // Inicializa o Terraform no diretório especificado
+                    // O 'init' baixa os providers e módulos necessários
+                    sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform init'"
                 }
             }
         }
@@ -24,8 +29,10 @@ pipeline {
         stage('Terraform fmt') {
             steps {
                 script {
-                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform fmt'"
-                sh "bash -c 'cd ${env.TERRAFORM_DIR_MODULE} && terraform fmt'"
+                    // Formata o código Terraform seguindo as convenções
+                    // Executa tanto no diretório principal quanto nos módulos
+                    sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform fmt'"
+                    sh "bash -c 'cd ${env.TERRAFORM_DIR_MODULE} && terraform fmt'"
                 }
             }
         }
@@ -33,7 +40,9 @@ pipeline {
          stage('Terraform plan') {
             steps {
                 script {
-                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform plan'"
+                    // Cria um plano de execução mostrando quais recursos serão criados
+                    // Não faz alterações, apenas mostra o que será feito
+                    sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform plan'"
                 }
             }
         }
@@ -41,7 +50,10 @@ pipeline {
         stage('Terraform apply') {
             steps {
                 script {
-                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform apply -auto-approve'"
+                    // Aplica as mudanças definidas no código Terraform
+                    // O '-auto-approve' pula a confirmação manual
+                    // ⚠️  CUIDADO: Isso criará recursos reais na AWS que podem gerar custos
+                    sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform apply -auto-approve'"
                 }
             }
         }
