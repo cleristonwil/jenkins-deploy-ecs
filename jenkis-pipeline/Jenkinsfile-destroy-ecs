@@ -2,13 +2,16 @@ pipeline {
     agent any
     
     environment {
-        TERRAFORM_DIR = "/home/willian/terraform-ecs"
-        TERRAFORM_DIR_MODULE = "/home/willian/terraform-ecs/modules"
+        // Diretório onde estão os arquivos Terraform (relativo ao workspace do Jenkins)
+        TERRAFORM_DIR = "terraform-ecs"
+        // Diretório dos módulos Terraform (relativo ao workspace do Jenkins)
+        TERRAFORM_DIR_MODULE = "terraform-ecs/modules"
     }
 
     stages {
         stage('Terraform validate') {
             steps {
+                // Verifica se o Terraform está instalado e mostra a versão
                 sh 'terraform --version'
             }
         }
@@ -16,7 +19,11 @@ pipeline {
         stage('Terraform Destroy') {
             steps {
                 script {
-                sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform destroy -auto-approve'"
+                    // ⚠️  ATENÇÃO: Este comando DESTROI todos os recursos criados pelo Terraform
+                    // Isso inclui: ECS Cluster, Task Definitions, Services, Load Balancers, etc.
+                    // O '-auto-approve' pula a confirmação manual
+                    // 💰 Isso pode ajudar a evitar custos desnecessários na AWS
+                    sh "bash -c 'cd ${env.TERRAFORM_DIR} && terraform destroy -auto-approve'"
                 }
             }
         }
