@@ -2,49 +2,75 @@ pipeline {
     agent any
     
     environment {
-    AWS_DEFAULT_REGION = "us-east-1"
-	THE_BUTLER_SAYS_SO=credentials('jk-aws-credentials')
-	ECS_CLUSTER = 'jk-webapp-cluster'
-    ECS_SERVICE = 'jk-webapp-svc'
-}
+        // Região da AWS onde os recursos estão localizados
+        AWS_DEFAULT_REGION = "us-east-1"
+        // Credenciais AWS configuradas no Jenkins (ID da credencial)
+        THE_BUTLER_SAYS_SO = credentials('jk-aws-credentials')
+        // Nome do cluster ECS onde a aplicação será deployada
+        ECS_CLUSTER = 'jk-webapp-cluster'
+        // Nome do serviço ECS que será atualizado
+        ECS_SERVICE = 'jk-webapp-svc'
+        // Diretório onde estão os arquivos da aplicação (Dockerfile, etc.)
+        APP_DIR = "app"
+    }
 
     stages {
         stage('Jenkins user checking if aws-cli is installed') {
             steps {
+                // Verifica se o AWS CLI está instalado e funcionando
                 sh 'aws --version'
             }
         }
         
         stage('Jenkins user listing aws resources') {
             steps {
-	            sh '''
-                aws s3 ls
-                aws ec2 describe-instances
+                // Testa as credenciais AWS listando recursos básicos
+                // Isso confirma que as permissões estão funcionando
+                sh '''
+                    aws s3 ls
+                    aws ec2 describe-instances
                 '''
-            }
-        }
-        
-        stage('Jenkins user accessing GitHub') {
-            steps {
-	            git branch: 'main', credentialsId: 'jk-gh-tk', url: 'https://github.com/cleristonwil/jk-cc-repo.git'
             }
         }
         
         stage('Jenkins Build and push image for ECR') {
             steps {
-	            sh '''
-	            docker logout
-	            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 503561427708.dkr.ecr.us-east-1.amazonaws.com
-	            docker build -t jk-webapp:latest .
-	            docker tag jk-webapp:latest 503561427708.dkr.ecr.us-east-1.amazonaws.com/jk-webapp:latest
-	            docker push 503561427708.dkr.ecr.us-east-1.amazonaws.com/jk-webapp:latest
-	            '''
+                script {
+                    // Navega para o diretório da aplicação e lista os arquivos
+                    sh "bash -c 'cd ${env.APP_DIR} && pwd && ls -la'"
+                    
+                    // ⚠️  SUBSTITUA OS VALORES ABAIXO PELOS COMANDOS DO SEU REPOSITÓRIO ECR
+                    // Acesse: AWS Console > ECR > Repositórios > [seu-repo] > "View push commands"
+                    sh '''
+                        cd app
+                        # Faz logout de qualquer registry Docker anterior
+                        docker logout
+                        
+                        # 🔄 SUBSTITUA pela linha de login do seu ECR:
+                        aws ecr get-login-password --region SUA_REGIAO | docker login --username AWS --password-stdin SEU_ACCOUNT_ID.dkr.ecr.SUA_REGIAO.amazonaws.com
+                        # Ex: aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 503561427708.dkr.ecr.us-east-1.amazonaws.com
+                        
+                        # 🔄 SUBSTITUA pelo nome do seu repositório:
+                        docker build -t SEU_REPO_NAME:latest .
+                        # Ex: docker build -t jk-webapp:latest .
+                        
+                        # 🔄 SUBSTITUA pela URI completa do seu repositório ECR:
+                        docker tag SEU_REPO_NAME:latest SEU_ACCOUNT_ID.dkr.ecr.SUA_REGIAO.amazonaws.com/SEU_REPO_NAME:latest
+                        # Ex: docker tag jk-webapp:latest 503561427708.dkr.ecr.us-east-1.amazonaws.com/jk-webapp:latest
+                        
+                        # 🔄 SUBSTITUA pela URI completa do seu repositório ECR:
+                        docker push SEU_ACCOUNT_ID.dkr.ecr.SUA_REGIAO.amazonaws.com/SEU_REPO_NAME:latest
+                        # Ex: docker push 503561427708.dkr.ecr.us-east-1.amazonaws.com/jk-webapp:latest
+                    '''
+                }
             }
         }
         
         stage('Deploying Webapp Application on AWS ECS') {
             steps {
-	            sh 'aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment'
+                // Força uma nova implantação do serviço ECS
+                // Isso fará o ECS baixar a nova imagem do ECR e atualizar os containers
+                sh 'aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment'
             }
         }
     }
